@@ -42,3 +42,23 @@ TEST(OMPHashMap, Clear) {
   EXPECT_FALSE(m.has("aa"));
   EXPECT_FALSE(m.has("bbb"));
 }
+
+TEST(OMPHashMap, MapReduce) {
+  cornell::omp_hash_map<std::string, double> m;
+  m.set("aa", 1);
+  m.set("ab", 2);
+  m.set("ac", 3);
+  m.set("ad", 4);
+  m.set("ae", 5);
+  m.set("ba", 6);
+  m.set("bb", 7);
+  // Count the number of keys that start with 'a'.
+  const auto& initial_a_to_one = [&](const std::string& key, const double value) {
+    (void)value;  // Prevent unused variable warning.
+    if (key.front() == 'a') return 1;
+    return 0;
+  };
+  const auto& plus = [&](size_t& old_value, const size_t new_value) { old_value += new_value; };
+  const size_t initial_a_count = m.map_reduce<size_t>(initial_a_to_one, plus, 0);
+  EXPECT_EQ(initial_a_count, 5);
+}

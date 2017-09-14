@@ -92,14 +92,23 @@ class omp_hash_map {
 
   std::vector<std::unique_ptr<hash_node>> buckets;
 
-  // Apply node_handler to the hash node which either has the specific key or is a null pointer.
+  // Apply node_handler to the hash node which has the specific key.
+  // If the key does not exist, apply to the unassociated node from the corresponding bucket.
   void hash_node_apply(
       const K& key, const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
 
-  // Apply node_handler to the hash node which either has the specific key or is a null pointer.
+  // Apply node_handler to all the hash nodes.
+  void hash_node_apply(const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
+
+  // Recursive part of hash_node_apply with a specific key.
   void hash_node_apply_recursive(
       std::unique_ptr<hash_node>& node,
       const K& key,
+      const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
+
+  // Recursive part of hash_node_apply to all the keys.
+  void hash_node_apply_recursive(
+      std::unique_ptr<hash_node>& node,
       const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
 
   void lock_all_segments();
@@ -162,11 +171,38 @@ bool omp_hash_map<K, V, H>::has(const K& key) {
 }
 
 template <class K, class V, class H>
+template <class W>
+W omp_hash_map<K, V, H>::map_reduce(
+    const std::function<W(const K&, const V&)>& mapper,
+    const std::function<void(W&, const W&)>& reducer,
+    const W& default_value) {
+  std::vector<W> mapped_values(n_threads, default_value);
+  W reduced_value = default_value;
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    const size_t thread_id = omp_get_thread_num();
+    const W& mapped_value = mapper(node->key, node->value);
+    reducer(mapped_values[thread_id], mapped_value);
+  };
+  hash_node_apply(node_handler);
+  for (const auto& mapped_value : mapped_values) reducer(reduced_value, mapped_value);
+  return reduced_value;
+}
+
+template <class K, class V, class H>
 void omp_hash_map<K, V, H>::apply(const K& key, const std::function<void(const V&)>& handler) {
   const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
     if (node) handler(node->value);
   };
   hash_node_apply(key, node_handler);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::clear() {
+  lock_all_segments();
+  buckets.resize(N_INITIAL_BUCKETS);
+  for (auto& bucket : buckets) bucket.reset();
+  n_keys = 0;
+  unlock_all_segments();
 }
 
 template <class K, class V, class H>
@@ -179,6 +215,18 @@ void omp_hash_map<K, V, H>::hash_node_apply(
   const size_t bucket_id = hash_value % n_buckets;
   hash_node_apply_recursive(buckets[bucket_id], key, node_handler);
   omp_unset_lock(&lock);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::hash_node_apply(
+    const std::function<void(std::unique_ptr<hash_node>&)>& node_handler) {
+  lock_all_segments();
+// For a good hash function, a static schedule shall provide both balance and speed.
+#pragma omp parallel for schedule(static, 1)
+  for (size_t i = 0; i < n_buckets; i++) {
+    hash_node_apply_recursive(buckets[i], node_handler);
+  }
+  unlock_all_segments();
 }
 
 template <class K, class V, class H>
@@ -198,12 +246,13 @@ void omp_hash_map<K, V, H>::hash_node_apply_recursive(
 }
 
 template <class K, class V, class H>
-void omp_hash_map<K, V, H>::clear() {
-  lock_all_segments();
-  buckets.resize(N_INITIAL_BUCKETS);
-  for (auto& bucket : buckets) bucket.reset();
-  n_keys = 0;
-  unlock_all_segments();
+void omp_hash_map<K, V, H>::hash_node_apply_recursive(
+    std::unique_ptr<hash_node>& node,
+    const std::function<void(std::unique_ptr<hash_node>&)>& node_handler) {
+  if (node) {
+    hash_node_apply_recursive(node->next, node_handler);
+    node_handler(node);
+  }
 }
 
 template <class K, class V, class H>
