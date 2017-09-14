@@ -2,6 +2,7 @@
 #define OMP_HASH_MAP_H_
 
 #include <functional>
+#include <memory>
 #include <vector>
 #include "omp.h"
 
@@ -87,6 +88,13 @@ class omp_hash_map {
   };
 
   std::vector<std::unique_ptr<hash_node>> buckets;
+
+  // Apply node_handler to the node if it has the specific key or is a null pointer.
+  // Otherwise, call itself recursively with the next pointer.
+  void hash_node_apply(
+      std::unique_ptr<hash_node>& node,
+      const K& key,
+      const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
 };
 
 template <class K, class V, class H>
@@ -105,6 +113,54 @@ omp_hash_map<K, V, H>::omp_hash_map() {
 template <class K, class V, class H>
 omp_hash_map<K, V, H>::~omp_hash_map() {
   for (auto& segment_lock : segment_locks) omp_destroy_lock(&segment_lock);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::set(const K& key, const V& value) {
+  const size_t hash_value = hasher(key);
+  const size_t segment_id = hash_value % n_segments;
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    if (!node) {
+      node.reset(new hash_node(key, value));
+    } else {
+      node->value = value;
+    }
+  };
+  auto& lock = segment_locks[segment_id];
+  omp_set_lock(&lock);
+  const size_t bucket_id = hash_value % n_buckets;
+  hash_node_apply(buckets[bucket_id], key, node_handler);
+  omp_unset_lock(&lock);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::apply(const K& key, const std::function<void(const V&)>& handler) {
+  const size_t hash_value = hasher(key);
+  const size_t segment_id = hash_value % n_segments;
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    if (node) handler(node->value);
+  };
+  auto& lock = segment_locks[segment_id];
+  omp_set_lock(&lock);
+  const size_t bucket_id = hash_value % n_buckets;
+  hash_node_apply(buckets[bucket_id], key, node_handler);
+  omp_unset_lock(&lock);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::hash_node_apply(
+    std::unique_ptr<hash_node>& node,
+    const K& key,
+    const std::function<void(std::unique_ptr<hash_node>&)>& node_handler) {
+  if (node) {
+    if (node->key == key) {
+      node_handler(node);
+    } else {
+      hash_node_apply(node->next, key, node_handler);
+    }
+  } else {
+    node_handler(node);
+  }
 }
 }
 #endif
