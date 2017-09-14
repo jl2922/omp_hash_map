@@ -63,6 +63,9 @@ class omp_hash_map {
   // Apply the handler to all the keys.
   void apply(const std::function<void(const K&, const V&)>& handler);
 
+  // Clear all keys.
+  void clear();
+
  private:
   size_t n_keys;
 
@@ -98,6 +101,10 @@ class omp_hash_map {
       std::unique_ptr<hash_node>& node,
       const K& key,
       const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
+
+  void lock_all_segments();
+
+  void unlock_all_segments();
 };
 
 template <class K, class V, class H>
@@ -148,9 +155,7 @@ template <class K, class V, class H>
 bool omp_hash_map<K, V, H>::has(const K& key) {
   bool has_key = false;
   const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
-    if (node) {
-      has_key = true;
-    }
+    if (node) has_key = true;
   };
   hash_node_apply(key, node_handler);
   return has_key;
@@ -191,5 +196,24 @@ void omp_hash_map<K, V, H>::hash_node_apply_recursive(
     node_handler(node);
   }
 }
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::clear() {
+  lock_all_segments();
+  buckets.resize(N_INITIAL_BUCKETS);
+  for (auto& bucket : buckets) bucket.reset();
+  n_keys = 0;
+  unlock_all_segments();
 }
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::lock_all_segments() {
+  for (auto& segment_lock : segment_locks) omp_set_lock(&segment_lock);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::unlock_all_segments() {
+  for (auto& segment_lock : segment_locks) omp_unset_lock(&segment_lock);
+}
+};
 #endif

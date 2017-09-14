@@ -31,3 +31,14 @@ TEST(OMPHashMap, UnsetAndCheck) {
   EXPECT_TRUE(m.has("bbb"));
   m.unset("not_exist_key");
 }
+
+TEST(OMPHashMap, Clear) {
+  cornell::omp_hash_map<std::string, double> m;
+  m.set("aa", 1);
+  m.set("bbb", 2);
+  EXPECT_TRUE(m.has("aa"));
+  EXPECT_TRUE(m.has("bbb"));
+  m.clear();
+  EXPECT_FALSE(m.has("aa"));
+  EXPECT_FALSE(m.has("bbb"));
+}
