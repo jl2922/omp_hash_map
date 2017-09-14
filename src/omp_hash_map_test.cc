@@ -3,5 +3,5 @@
 
 TEST(OMPHashMap, Initialization) {
   cornell::omp_hash_map<std::string, double> m;
-  EXPECT_EQ(m.size(), 0);
+  EXPECT_EQ(m.get_n_keys(), 0);
 }
