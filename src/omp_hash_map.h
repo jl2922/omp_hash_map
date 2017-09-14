@@ -123,11 +123,37 @@ void omp_hash_map<K, V, H>::set(const K& key, const V& value) {
   const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
     if (!node) {
       node.reset(new hash_node(key, value));
+#pragma omp atomic
+      n_keys++;
     } else {
       node->value = value;
     }
   };
   hash_node_apply(key, node_handler);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::unset(const K& key) {
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    if (node) {
+      node = std::move(node->next);
+#pragma omp atomic
+      n_keys--;
+    }
+  };
+  hash_node_apply(key, node_handler);
+}
+
+template <class K, class V, class H>
+bool omp_hash_map<K, V, H>::has(const K& key) {
+  bool has_key = false;
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    if (node) {
+      has_key = true;
+    }
+  };
+  hash_node_apply(key, node_handler);
+  return has_key;
 }
 
 template <class K, class V, class H>
