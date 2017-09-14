@@ -5,6 +5,7 @@ branches:
   only:
   - master
 matrix:
+  include:
     # works on Precise and Trusty
     - os: linux
       addons:
