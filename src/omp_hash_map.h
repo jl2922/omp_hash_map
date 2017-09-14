@@ -71,11 +71,22 @@ class omp_hash_map {
 
   size_t n_segments;
 
+  H hasher;
+
   std::vector<omp_lock_t> segment_locks;
 
   constexpr static size_t N_INITIAL_BUCKETS = 5;
 
   constexpr static size_t N_SEGMENTS_PER_THREAD = 7;
+
+  struct hash_node {
+    K key;
+    V value;
+    std::unique_ptr<hash_node> next;
+    hash_node(const K& key, const V& value) : key(key), value(value){};
+  };
+
+  std::vector<std::unique_ptr<hash_node>> buckets;
 };
 
 template <class K, class V, class H>
@@ -85,9 +96,10 @@ omp_hash_map<K, V, H>::omp_hash_map() {
   n_threads = omp_get_max_threads();
   n_segments = n_threads * N_SEGMENTS_PER_THREAD;
 
-  // Initialize locks.
   segment_locks.resize(n_segments);
   for (auto& segment_lock : segment_locks) omp_init_lock(&segment_lock);
+
+  buckets.resize(n_buckets);
 }
 
 template <class K, class V, class H>
