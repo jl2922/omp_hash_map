@@ -1,6 +1,7 @@
 #ifndef OMP_HASH_MAP_H_
 #define OMP_HASH_MAP_H_
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -79,7 +80,9 @@ class omp_hash_map {
 
   std::vector<omp_lock_t> segment_locks;
 
-  constexpr static size_t N_INITIAL_BUCKETS = 5;
+  std::vector<omp_lock_t> rehashing_segment_locks;
+
+  constexpr static size_t N_INITIAL_BUCKETS = 3;
 
   constexpr static size_t N_SEGMENTS_PER_THREAD = 7;
 
@@ -91,6 +94,9 @@ class omp_hash_map {
   };
 
   std::vector<std::unique_ptr<hash_node>> buckets;
+
+  // Get the actual number of hash buckets that is larger than or equal to the specified number.
+  size_t get_n_rehashing_buckets(const size_t n_buckets);
 
   // Apply node_handler to the hash node which has the specific key.
   // If the key does not exist, apply to the unassociated node from the corresponding bucket.
@@ -124,14 +130,83 @@ omp_hash_map<K, V, H>::omp_hash_map() {
   n_segments = n_threads * N_SEGMENTS_PER_THREAD;
 
   segment_locks.resize(n_segments);
-  for (auto& segment_lock : segment_locks) omp_init_lock(&segment_lock);
+  rehashing_segment_locks.resize(n_segments);
+  for (auto& lock : segment_locks) omp_init_lock(&lock);
+  for (auto& lock : rehashing_segment_locks) omp_init_lock(&lock);
 
   buckets.resize(n_buckets);
 }
 
 template <class K, class V, class H>
 omp_hash_map<K, V, H>::~omp_hash_map() {
-  for (auto& segment_lock : segment_locks) omp_destroy_lock(&segment_lock);
+  for (auto& lock : segment_locks) omp_destroy_lock(&lock);
+  for (auto& lock : rehashing_segment_locks) omp_destroy_lock(&lock);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::reserve(const size_t n_buckets_in) {
+  lock_all_segments();
+  if (n_buckets >= n_buckets_in) {
+    unlock_all_segments();
+    return;
+  }
+
+  const size_t n_rehashing_buckets = get_n_rehashing_buckets(n_buckets_in);
+
+  // Rehash.
+  std::vector<std::unique_ptr<hash_node>> rehashing_buckets(n_rehashing_buckets);
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    const K& key = node->key;
+    const size_t hash_value = hasher(key);
+    const size_t bucket_id = hash_value % n_rehashing_buckets;
+    const auto& rehashing_node_handler = [&](std::unique_ptr<hash_node>& rehashing_node) {
+      rehashing_node = std::move(node);
+      rehashing_node->next.release();
+    };
+    const size_t segment_id = hash_value % n_segments;
+    auto& lock = rehashing_segment_locks[segment_id];
+    omp_set_lock(&lock);
+    hash_node_apply_recursive(rehashing_buckets[bucket_id], key, rehashing_node_handler);
+    omp_unset_lock(&lock);
+  };
+
+#pragma omp parallel for schedule(static, 1)
+  for (size_t i = 0; i < n_buckets; i++) {
+    hash_node_apply_recursive(buckets[i], node_handler);
+  }
+
+  buckets = std::move(rehashing_buckets);
+  n_buckets = n_rehashing_buckets;
+  unlock_all_segments();
+}
+
+template <class K, class V, class H>
+size_t omp_hash_map<K, V, H>::get_n_rehashing_buckets(const size_t n_buckets) {
+  constexpr size_t PRIME_NUMBERS[] = {
+      5,         11,        23,        47,         97,        199,      409,      823,
+      1741,      3469,      6949,      14033,      28411,     57557,    116731,   236897,
+      480881,    976369,    1982627,   4026031,    8175383,   16601593, 33712729, 68460391,
+      139022417, 282312799, 573292817, 1164186217, 2147483647};
+  constexpr size_t N_PRIME_NUMBERS = sizeof(PRIME_NUMBERS) / sizeof(size_t);
+  constexpr size_t LAST_PRIME_NUMBER = PRIME_NUMBERS[N_PRIME_NUMBERS - 1];
+  size_t remaining_factor = n_buckets;
+  size_t n_rehashing_buckets = 1;
+  if (remaining_factor > LAST_PRIME_NUMBER) {
+    remaining_factor /= 817504253;
+    n_rehashing_buckets *= 817504253;
+  }
+  if (remaining_factor > LAST_PRIME_NUMBER) throw std::invalid_argument("n_buckets too large");
+  size_t left = 0, right = N_PRIME_NUMBERS - 1;
+  while (left < right) {
+    size_t mid = (left + right) / 2;
+    if (PRIME_NUMBERS[mid] < remaining_factor) {
+      left = mid + 1;
+    } else {
+      right = mid;
+    }
+  }
+  n_rehashing_buckets *= PRIME_NUMBERS[left];
+  return n_rehashing_buckets;
 }
 
 template <class K, class V, class H>
@@ -143,6 +218,39 @@ void omp_hash_map<K, V, H>::set(const K& key, const V& value) {
       n_keys++;
     } else {
       node->value = value;
+    }
+  };
+  hash_node_apply(key, node_handler);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::set(const K& key, const std::function<void(V&)>& setter) {
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    if (!node) {
+      V value;
+      setter(value);
+      node.reset(new hash_node(key, value));
+#pragma omp atomic
+      n_keys++;
+    } else {
+      setter(node->value);
+    }
+  };
+  hash_node_apply(key, node_handler);
+}
+
+template <class K, class V, class H>
+void omp_hash_map<K, V, H>::set(
+    const K& key, const std::function<void(V&)>& setter, const V& default_value) {
+  const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    if (!node) {
+      V value(default_value);
+      setter(value);
+      node.reset(new hash_node(key, value));
+#pragma omp atomic
+      n_keys++;
+    } else {
+      setter(node->value);
     }
   };
   hash_node_apply(key, node_handler);
@@ -257,12 +365,12 @@ void omp_hash_map<K, V, H>::hash_node_apply_recursive(
 
 template <class K, class V, class H>
 void omp_hash_map<K, V, H>::lock_all_segments() {
-  for (auto& segment_lock : segment_locks) omp_set_lock(&segment_lock);
+  for (auto& lock : segment_locks) omp_set_lock(&lock);
 }
 
 template <class K, class V, class H>
 void omp_hash_map<K, V, H>::unlock_all_segments() {
-  for (auto& segment_lock : segment_locks) omp_unset_lock(&segment_lock);
+  for (auto& lock : segment_locks) omp_unset_lock(&lock);
 }
 };
 #endif
