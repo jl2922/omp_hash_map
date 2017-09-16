@@ -15,6 +15,12 @@ TEST(OMPHashMap, Reserve) {
   EXPECT_TRUE(m.has("aa"));
   EXPECT_TRUE(m.has("bbb"));
   m.apply("bbb", [&](const double value) { EXPECT_EQ(value, 2); });
+
+  cornell::omp_hash_map<size_t, double> m2;
+  for (size_t i = 0; i < 100; i++) {
+    m2.set(i, 0);
+    EXPECT_GE(m.get_n_buckets(), i);
+  }
 }
 
 TEST(OMPHashMap, SingleSetAndApply) {

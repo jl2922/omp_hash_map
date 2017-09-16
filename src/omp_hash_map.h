@@ -220,6 +220,7 @@ void omp_hash_map<K, V, H>::set(const K& key, const V& value) {
       node->value = value;
     }
   };
+  if (n_keys >= n_buckets) reserve(n_keys);
   hash_node_apply(key, node_handler);
 }
 
@@ -236,6 +237,7 @@ void omp_hash_map<K, V, H>::set(const K& key, const std::function<void(V&)>& set
       setter(node->value);
     }
   };
+  if (n_keys >= n_buckets) reserve(n_keys);
   hash_node_apply(key, node_handler);
 }
 
@@ -253,6 +255,7 @@ void omp_hash_map<K, V, H>::set(
       setter(node->value);
     }
   };
+  if (n_keys >= n_buckets) reserve(n_keys);
   hash_node_apply(key, node_handler);
 }
 
@@ -289,6 +292,7 @@ W omp_hash_map<K, V, H>::map_reduce(
   const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
     const size_t thread_id = omp_get_thread_num();
     const W& mapped_value = mapper(node->key, node->value);
+    fprintf(stderr, "%d\n", mapped_value);
     reducer(mapped_values[thread_id], mapped_value);
   };
   hash_node_apply(node_handler);
