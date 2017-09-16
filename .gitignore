@@ -31,5 +31,6 @@
 *.out
 *.app
 
-# Editor Files
+# OS and Editor Files
 .vscode/
+*.dSYM/
