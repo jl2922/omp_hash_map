@@ -52,6 +52,19 @@ TEST(OMPHashMapTest, Set) {
   EXPECT_EQ(m.get_copy_or_default("bbb", 0), 6);
 }
 
+TEST(OMPHashMapLargeTest, HundredMillionsInsertWithAutoRehash) {
+  cornell::hpc::omp_hash_map<int, int> m;
+  constexpr int LARGE_N_KEYS = 100000000;
+
+  omp_set_nested(1); // Parallel rehashing.
+#pragma omp parallel for
+  for (int i = 0; i < LARGE_N_KEYS; i++) {
+    m.set(i, i);
+  }
+  EXPECT_EQ(m.get_n_keys(), LARGE_N_KEYS);
+  EXPECT_GE(m.get_n_buckets(), LARGE_N_KEYS);
+}
+
 TEST(OMPHashMapTest, Unset) {
   cornell::hpc::omp_hash_map<std::string, int> m;
   m.set("aa", 1);
@@ -114,12 +127,12 @@ TEST(OMPHashMapTest, MapReduce) {
   EXPECT_EQ(initial_a_count, 5);
 }
 
-TEST(OMPHashMapLargeTest, QuarterBillionsMapReduce) {
+TEST(OMPHashMapLargeTest, HundredMillionsMapReduce) {
   cornell::hpc::omp_hash_map<int, int> m;
-  constexpr int LARGE_N_KEYS = 250000000;
+  constexpr int LARGE_N_KEYS = 100000000;
 
   m.reserve(LARGE_N_KEYS);
-#pragma omp parallel for schedule(static, 1)
+#pragma omp parallel for
   for (int i = 0; i < LARGE_N_KEYS; i++) {
     m.set(i, i);
   }

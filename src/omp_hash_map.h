@@ -99,8 +99,7 @@ class omp_hash_map {
 
   std::vector<omp_lock_t> segment_locks;
 
-  // For parallel rehashing.
-  // Automatic rehashing will be done in parallel when omp_set_nested(1).
+  // For parallel rehashing (Require omp_set_nested(1)).
   std::vector<omp_lock_t> rehashing_segment_locks;
 
   constexpr static size_t N_INITIAL_BUCKETS = 5;
@@ -143,7 +142,7 @@ class omp_hash_map {
       const K& key,
       const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
 
-  // Recursively apply the handler to each node on the list starting from the node specified.
+  // Recursively apply the handler to each node on the list from the node specified (post-order).
   void hash_node_apply_recursive(
       std::unique_ptr<hash_node>& node,
       const std::function<void(std::unique_ptr<hash_node>&)>& node_handler);
@@ -187,20 +186,20 @@ void omp_hash_map<K, V, H>::rehash(const size_t n_rehashing_buckets) {
   // Rehash.
   std::vector<std::unique_ptr<hash_node>> rehashing_buckets(n_rehashing_buckets);
   const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
+    const auto& rehashing_node_handler = [&](std::unique_ptr<hash_node>& rehashing_node) {
+      rehashing_node = std::move(node);
+      rehashing_node->next.reset();
+    };
     const K& key = node->key;
     const size_t hash_value = hasher(key);
     const size_t bucket_id = hash_value % n_rehashing_buckets;
-    const auto& rehashing_node_handler = [&](std::unique_ptr<hash_node>& rehashing_node) {
-      rehashing_node = std::move(node);
-      rehashing_node->next.release();
-    };
-    const size_t segment_id = hash_value % n_segments;
+    const size_t segment_id = bucket_id % n_segments;
     auto& lock = rehashing_segment_locks[segment_id];
     omp_set_lock(&lock);
     hash_node_apply_recursive(rehashing_buckets[bucket_id], key, rehashing_node_handler);
     omp_unset_lock(&lock);
   };
-#pragma omp parallel for schedule(static, 1)
+#pragma omp parallel for
   for (size_t i = 0; i < n_buckets; i++) {
     hash_node_apply_recursive(buckets[i], node_handler);
   }
@@ -382,12 +381,21 @@ template <class K, class V, class H>
 void omp_hash_map<K, V, H>::hash_node_apply(
     const K& key, const std::function<void(std::unique_ptr<hash_node>&)>& node_handler) {
   const size_t hash_value = hasher(key);
-  const size_t segment_id = hash_value % n_segments;
-  auto& lock = segment_locks[segment_id];
-  omp_set_lock(&lock);
-  const size_t bucket_id = hash_value % n_buckets;
-  hash_node_apply_recursive(buckets[bucket_id], key, node_handler);
-  omp_unset_lock(&lock);
+  bool applied = false;
+  while (!applied) {
+    const size_t n_buckets_snapshot = n_buckets;
+    const size_t bucket_id = hash_value % n_buckets_snapshot;
+    const size_t segment_id = bucket_id % n_segments;
+    auto& lock = segment_locks[segment_id];
+    omp_set_lock(&lock);
+    if (n_buckets_snapshot != n_buckets) {
+      omp_unset_lock(&lock);
+      continue;
+    }
+    hash_node_apply_recursive(buckets[bucket_id], key, node_handler);
+    omp_unset_lock(&lock);
+    applied = true;
+  }
 }
 
 template <class K, class V, class H>
@@ -395,7 +403,7 @@ void omp_hash_map<K, V, H>::hash_node_apply(
     const std::function<void(std::unique_ptr<hash_node>&)>& node_handler) {
   lock_all_segments();
 // For a good hash function, a static schedule shall provide both a good balance and speed.
-#pragma omp parallel for schedule(static, 1)
+#pragma omp parallel for
   for (size_t i = 0; i < n_buckets; i++) {
     hash_node_apply_recursive(buckets[i], node_handler);
   }
@@ -423,6 +431,7 @@ void omp_hash_map<K, V, H>::hash_node_apply_recursive(
     std::unique_ptr<hash_node>& node,
     const std::function<void(std::unique_ptr<hash_node>&)>& node_handler) {
   if (node) {
+    // Post-order traversal for rehashing.
     hash_node_apply_recursive(node->next, node_handler);
     node_handler(node);
   }
