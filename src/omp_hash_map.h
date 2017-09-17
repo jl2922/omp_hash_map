@@ -8,7 +8,7 @@
 #include "omp.h"
 
 namespace cornell {
-namespace hpc {
+namespace hci {
 // A high performance concurrent hash map based on OpenMP.
 template <class K, class V, class H = std::hash<K>>
 class omp_hash_map {

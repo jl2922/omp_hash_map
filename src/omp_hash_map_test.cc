@@ -4,18 +4,18 @@
 #include "omp.h"
 
 TEST(OMPHashMapTest, Initialization) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   EXPECT_EQ(m.get_n_keys(), 0);
 }
 
 TEST(OMPHashMapTest, Reserve) {
   // Explicit reserve tests.
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   m.reserve(10);
   EXPECT_GE(m.get_n_buckets(), 10);
 
   // Automatic reserve tests.
-  cornell::hpc::omp_hash_map<int, int> m2;
+  cornell::hci::omp_hash_map<int, int> m2;
   for (int i = 0; i < 100; i++) {
     m2.set(i, i * i);
     EXPECT_EQ(m2.get_n_keys(), i + 1);
@@ -27,7 +27,7 @@ TEST(OMPHashMapTest, Reserve) {
 }
 
 TEST(OMPHashMapLargeTest, FourBillionsReserve) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   constexpr size_t LARGE_N_BUCKETS = 4000000000;
   m.reserve(LARGE_N_BUCKETS);
   const size_t n_buckets = m.get_n_buckets();
@@ -35,7 +35,7 @@ TEST(OMPHashMapLargeTest, FourBillionsReserve) {
 }
 
 TEST(OMPHashMapTest, Set) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   // Set with value.
   m.set("aa", 1);
   EXPECT_EQ(m.get_copy_or_default("aa", 0), 1);
@@ -53,7 +53,7 @@ TEST(OMPHashMapTest, Set) {
 }
 
 TEST(OMPHashMapLargeTest, HundredMillionsInsertWithAutoRehash) {
-  cornell::hpc::omp_hash_map<int, int> m;
+  cornell::hci::omp_hash_map<int, int> m;
   constexpr int LARGE_N_KEYS = 100000000;
 
   omp_set_nested(1); // Parallel rehashing.
@@ -66,7 +66,7 @@ TEST(OMPHashMapLargeTest, HundredMillionsInsertWithAutoRehash) {
 }
 
 TEST(OMPHashMapTest, Unset) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   m.set("aa", 1);
   m.set("bbb", 2);
   m.unset("aa");
@@ -84,7 +84,7 @@ TEST(OMPHashMapTest, Unset) {
 }
 
 TEST(OMPHashMapTest, Map) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   const auto& cubic = [&](const int value) { return value * value * value; };
   m.set("aa", 5);
   EXPECT_EQ(m.map<int>("aa", cubic, 0), 125);
@@ -92,7 +92,7 @@ TEST(OMPHashMapTest, Map) {
 }
 
 TEST(OMPHashMapTest, Apply) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   m.set("aa", 5);
   m.set("bbb", 10);
   int sum = 0;
@@ -109,7 +109,7 @@ TEST(OMPHashMapTest, Apply) {
 }
 
 TEST(OMPHashMapTest, MapReduce) {
-  cornell::hpc::omp_hash_map<std::string, double> m;
+  cornell::hci::omp_hash_map<std::string, double> m;
   m.set("aa", 1.1);
   m.set("ab", 2.2);
   m.set("ac", 3.3);
@@ -123,12 +123,12 @@ TEST(OMPHashMapTest, MapReduce) {
     if (key.front() == 'a') return 1;
     return 0;
   };
-  const int initial_a_count = m.map_reduce<int>(initial_a_to_one, cornell::hpc::reducer::sum<int>, 0);
+  const int initial_a_count = m.map_reduce<int>(initial_a_to_one, cornell::hci::reducer::sum<int>, 0);
   EXPECT_EQ(initial_a_count, 5);
 }
 
 TEST(OMPHashMapLargeTest, HundredMillionsMapReduce) {
-  cornell::hpc::omp_hash_map<int, int> m;
+  cornell::hci::omp_hash_map<int, int> m;
   constexpr int LARGE_N_KEYS = 100000000;
 
   m.reserve(LARGE_N_KEYS);
@@ -140,12 +140,12 @@ TEST(OMPHashMapLargeTest, HundredMillionsMapReduce) {
     (void)key;
     return value;
   };
-  const auto& sum = m.map_reduce<int>(mapper, cornell::hpc::reducer::max<int>, 0.0);
+  const auto& sum = m.map_reduce<int>(mapper, cornell::hci::reducer::max<int>, 0.0);
   EXPECT_EQ(sum, LARGE_N_KEYS - 1);
 }
 
 TEST(OMPHashMapTest, Clear) {
-  cornell::hpc::omp_hash_map<std::string, int> m;
+  cornell::hci::omp_hash_map<std::string, int> m;
   m.set("aa", 1);
   m.set("bbb", 2);
   m.clear();
