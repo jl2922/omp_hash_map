@@ -1,7 +1,7 @@
 #include "omp_hash_map.h"
-#include "reducer.h"
 #include "gtest/gtest.h"
 #include "omp.h"
+#include "reducer.h"
 
 TEST(OMPHashMapTest, Initialization) {
   cornell::hci::omp_hash_map<std::string, int> m;
@@ -56,7 +56,7 @@ TEST(OMPHashMapLargeTest, HundredMillionsInsertWithAutoRehash) {
   cornell::hci::omp_hash_map<int, int> m;
   constexpr int LARGE_N_KEYS = 100000000;
 
-  omp_set_nested(1); // Parallel rehashing.
+  omp_set_nested(1);  // Parallel rehashing.
 #pragma omp parallel for
   for (int i = 0; i < LARGE_N_KEYS; i++) {
     m.set(i, i);
@@ -123,7 +123,8 @@ TEST(OMPHashMapTest, MapReduce) {
     if (key.front() == 'a') return 1;
     return 0;
   };
-  const int initial_a_count = m.map_reduce<int>(initial_a_to_one, cornell::hci::reducer::sum<int>, 0);
+  const int initial_a_count =
+      m.map_reduce<int>(initial_a_to_one, cornell::hci::reducer::sum<int>, 0);
   EXPECT_EQ(initial_a_count, 5);
 }
 

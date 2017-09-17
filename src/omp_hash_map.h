@@ -158,7 +158,7 @@ omp_hash_map<K, V, H>::omp_hash_map() {
   n_buckets = N_INITIAL_BUCKETS;
   buckets.resize(n_buckets);
   max_load_factor = DEFAULT_MAX_LOAD_FACTOR;
-  
+
   n_threads = omp_get_max_threads();
   n_segments = n_threads * N_SEGMENTS_PER_THREAD;
   segment_locks.resize(n_segments);

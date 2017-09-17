@@ -1,7 +1,7 @@
-#include "omp_hash_map.h"
 #include "reducer.h"
 #include "gtest/gtest.h"
 #include "omp.h"
+#include "omp_hash_map.h"
 
 TEST(ReducerTest, ReduceSum) {
   cornell::hci::omp_hash_map<int, int> m;
