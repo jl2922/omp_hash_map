@@ -10,9 +10,9 @@ matrix:
           - ubuntu-toolchain-r-test
         packages:
           - g++-5
-    hosts:
-      - travis
-    hostname: travis
+      hosts:
+        - travis
+      hostname: travis
     env:
       - MATRIX_EVAL="TRAVIS_CXX=g++-5"
   - os: linux
@@ -22,9 +22,9 @@ matrix:
           - ubuntu-toolchain-r-test
         packages:
           - g++-6
-    hosts:
-      - travis
-    hostname: travis
+      hosts:
+        - travis
+      hostname: travis
     env:
       - MATRIX_EVAL="TRAVIS_CXX=g++-6"
   - os: linux
@@ -34,16 +34,15 @@ matrix:
           - ubuntu-toolchain-r-test
         packages:
           - g++-7
-    hosts:
-      - travis
-    hostname: travis
+      hosts:
+        - travis
+      hostname: travis
     env:
       - MATRIX_EVAL="TRAVIS_CXX=g++-7"
 env:
   - OMP_NUM_THREADS=4
 before_install:
   - eval "${MATRIX_EVAL}"
-  - echo $TRAVIS_CXX
   - hostname
 script: make -j
 
