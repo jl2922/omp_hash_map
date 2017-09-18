@@ -20,6 +20,7 @@ GTEST_SRCS := $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h \
 GTEST_MAIN := $(OBJ_DIR)/gtest_main.a
 
 # Host specific configurations.
+HOSTNAME := $(shell hostname)
 ifeq ($(HOSTNAME), travis)
 ifneq ($(TRAVIS_CXX),)
 CXX := $(TRAVIS_CXX)
