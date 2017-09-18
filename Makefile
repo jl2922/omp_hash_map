@@ -1,4 +1,5 @@
 # Default options.
+CXX := g++
 CXXFLAGS := -std=c++14 -Wall -Wextra -O3 -fopenmp -g
 SRC_DIR := src
 OBJ_DIR := build
@@ -17,6 +18,13 @@ GTEST_HEADERS := $(GTEST_DIR)/include/gtest/*.h \
 GTEST_SRCS := $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h \
 		$(GTEST_HEADERS)
 GTEST_MAIN := $(OBJ_DIR)/gtest_main.a
+
+# Host specific configurations.
+ifeq ($(HOSTNAME), travis)
+ifneq ($(TRAVIS_CXX),)
+CXX := $(TRAVIS_CXX)
+endif
+endif
 
 .PHONY: all test all_tests clean
 
