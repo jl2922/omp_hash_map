@@ -35,5 +35,7 @@ env:
   - OMP_NUM_THREADS=4
 before_install:
   - eval "${MATRIX_EVAL}"
+  - echo $TRAVIS_CXX
+  - hostname
 script: make -j
 
