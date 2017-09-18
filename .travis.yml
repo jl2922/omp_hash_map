@@ -1,7 +1,9 @@
 language: cpp
 sudo: required
 dist: trusty
-hostname: travis
+addons:
+  hosts:
+  - travis
 matrix:
   include:
   - os: linux
