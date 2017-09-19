@@ -1,0 +1,37 @@
+language: cpp
+sudo: required
+dist: trusty
+matrix:
+  include:
+  - os: linux
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-5
+    env:
+      - MATRIX_EVAL="CXX=g++-5"
+  - os: linux
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-6
+    env:
+      - MATRIX_EVAL="CXX=g++-6"
+  - os: linux
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-7
+    env:
+      - MATRIX_EVAL="CXX=g++-7"
+env:
+  - OMP_NUM_THREADS=4
+before_install:
+  - eval "${MATRIX_EVAL}"
+script: make -j

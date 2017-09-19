@@ -1,5 +1,4 @@
 # Default options.
-CXX := g++
 CXXFLAGS := -std=c++14 -Wall -Wextra -O3 -fopenmp -g
 SRC_DIR := src
 OBJ_DIR := build
