@@ -1,4 +1,7 @@
 # Default options.
+ifndef CXX
+CXX := g++
+endif
 CXXFLAGS := -std=c++14 -Wall -Wextra -O3 -fopenmp -g
 SRC_DIR := src
 OBJ_DIR := build
@@ -17,11 +20,6 @@ GTEST_HEADERS := $(GTEST_DIR)/include/gtest/*.h \
 GTEST_SRCS := $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h \
 		$(GTEST_HEADERS)
 GTEST_MAIN := $(OBJ_DIR)/gtest_main.a
-
-# For travis build.
-ifdef CXXCI
-CXX := $(CXXCI)
-endif
 
 .PHONY: all test all_tests clean
 
