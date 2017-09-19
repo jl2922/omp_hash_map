@@ -34,5 +34,6 @@ env:
   - OMP_NUM_THREADS=4
 before_install:
   - eval "${MATRIX_EVAL}"
+  - echo $CXXCI
 script: make -j
 
