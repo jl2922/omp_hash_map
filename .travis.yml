@@ -11,7 +11,7 @@ matrix:
         packages:
           - g++-5
     env:
-      - MATRIX_EVAL="TRAVIS_CXX=g++-5"
+      - MATRIX_EVAL="CXXCI=g++-5"
   - os: linux
     addons:
       apt:
@@ -20,7 +20,7 @@ matrix:
         packages:
           - g++-6
     env:
-      - MATRIX_EVAL="TRAVIS_CXX=g++-6"
+      - MATRIX_EVAL="CXXCI=g++-6"
   - os: linux
     addons:
       apt:
@@ -29,7 +29,7 @@ matrix:
         packages:
           - g++-7
     env:
-      - MATRIX_EVAL="TRAVIS_CXX=g++-7"
+      - MATRIX_EVAL="CXXCI=g++-7"
 env:
   - OMP_NUM_THREADS=4
 before_install:
