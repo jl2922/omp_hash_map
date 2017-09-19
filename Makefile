@@ -20,7 +20,7 @@ GTEST_SRCS := $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h \
 GTEST_MAIN := $(OBJ_DIR)/gtest_main.a
 
 # For travis build.
-ifneq ($(CXXCI),)
+ifdef CXXCI
 CXX := $(CXXCI)
 endif
 
