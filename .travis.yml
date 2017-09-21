@@ -38,4 +38,4 @@ before_install:
   - ./install-dependencies.sh
 script: make -j
 after_success:
-  - coveralls --exclude gtest-1.8.0 --exclude-pattern .*_test.cc --gcov-options '\-lp'
+  - coveralls --exclude gtest --exclude-pattern .*_test.cc --gcov-options '\-lp'
