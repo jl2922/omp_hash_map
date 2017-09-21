@@ -39,6 +39,8 @@ TEST(OMPHashSetTest, Add) {
   // Set with value.
   m.add("aa");
   EXPECT_TRUE(m.has("aa"));
+  m.add("aa");
+  EXPECT_TRUE(m.has("aa"));
 
   m.add("bbb");
   EXPECT_TRUE(m.has("aa"));

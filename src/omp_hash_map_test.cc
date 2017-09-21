@@ -37,6 +37,8 @@ TEST(OMPHashMapLargeTest, FourBillionsReserve) {
 TEST(OMPHashMapTest, Set) {
   cornell::hci::omp_hash_map<std::string, int> m;
   // Set with value.
+  m.set("aa", 0);
+  EXPECT_EQ(m.get_copy_or_default("aa", 0), 0);
   m.set("aa", 1);
   EXPECT_EQ(m.get_copy_or_default("aa", 0), 1);
 
@@ -44,6 +46,8 @@ TEST(OMPHashMapTest, Set) {
   const auto& increase_by_one = [&](auto& value) { value++; };
   m.set("aa", increase_by_one);
   EXPECT_EQ(m.get_copy_or_default("aa", 0), 2);
+  m.set("cc", increase_by_one);
+  EXPECT_EQ(m.get_copy_or_default("cc", 0), 1);
 
   // Set with setter function and a custom default value.
   m.set("aa", increase_by_one, 0);
