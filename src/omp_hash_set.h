@@ -83,7 +83,7 @@ class omp_hash_set {
   // For parallel rehashing (Require omp_set_nested(1)).
   std::vector<omp_lock_t> rehashing_segment_locks;
 
-  constexpr static size_t N_INITIAL_BUCKETS = 5;
+  constexpr static size_t N_INITIAL_BUCKETS = 11;
 
   constexpr static size_t N_SEGMENTS_PER_THREAD = 7;
 
@@ -193,18 +193,21 @@ template <class K, class H>
 size_t omp_hash_set<K, H>::get_n_rehashing_buckets(const size_t n_buckets_in) const {
   // Returns a number that is greater than or equal to n_buckets_in.
   // That number is either a prime number itself, or a product of two prime numbers.
-  constexpr size_t PRIME_NUMBERS[] = {
-      5,         11,        23,        47,         97,        199,      409,      823,
-      1741,      3469,      6949,      14033,      28411,     57557,    116731,   236897,
-      480881,    976369,    1982627,   4026031,    8175383,   16601593, 33712729, 68460391,
-      139022417, 282312799, 573292817, 1164186217, 2147483647};
+  // Returns a number that is greater than or equal to n_buckets_in.
+  // That number is either a prime number itself, or a product of two prime numbers.
+  constexpr size_t PRIME_NUMBERS[] = {11,   17,    29,    47,    79,    127,   211,
+                                      337,  547,   887,   1433,  2311,  3739,  6053,
+                                      9791, 15858, 25667, 41539, 67213, 104729};
   constexpr size_t N_PRIME_NUMBERS = sizeof(PRIME_NUMBERS) / sizeof(size_t);
   constexpr size_t LAST_PRIME_NUMBER = PRIME_NUMBERS[N_PRIME_NUMBERS - 1];
+  constexpr size_t DIVISION_FACTOR = 15858;
   size_t remaining_factor = n_buckets_in;
   size_t n_rehashing_buckets = 1;
-  if (remaining_factor > LAST_PRIME_NUMBER) {
-    remaining_factor /= 817504253;
-    n_rehashing_buckets *= 817504253;
+  for (size_t i = 0; i < 3; i++) {
+    if (remaining_factor > LAST_PRIME_NUMBER) {
+      remaining_factor /= DIVISION_FACTOR;
+      n_rehashing_buckets *= DIVISION_FACTOR;
+    }
   }
   if (remaining_factor > LAST_PRIME_NUMBER) throw std::invalid_argument("n_buckets too large");
   size_t left = 0, right = N_PRIME_NUMBERS - 1;

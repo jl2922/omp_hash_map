@@ -26,9 +26,9 @@ TEST(OMPHashMapTest, Reserve) {
   }
 }
 
-TEST(OMPHashMapLargeTest, FourBillionsReserve) {
+TEST(OMPHashMapLargeTest, HundredMillionsReserve) {
   cornell::hci::omp_hash_map<std::string, int> m;
-  constexpr size_t LARGE_N_BUCKETS = 4000000000;
+  constexpr size_t LARGE_N_BUCKETS = 100000000;
   m.reserve(LARGE_N_BUCKETS);
   const size_t n_buckets = m.get_n_buckets();
   EXPECT_GE(n_buckets, LARGE_N_BUCKETS);
@@ -57,9 +57,9 @@ TEST(OMPHashMapTest, Set) {
   EXPECT_EQ(m.get_copy_or_default("bbb", 0), 6);
 }
 
-TEST(OMPHashMapLargeTest, HundredMillionsInsertWithAutoRehash) {
+TEST(OMPHashMapLargeTest, TenMillionsInsertWithAutoRehash) {
   cornell::hci::omp_hash_map<int, int> m;
-  constexpr int LARGE_N_KEYS = 100000000;
+  constexpr int LARGE_N_KEYS = 10000000;
 
   omp_set_nested(1);  // Parallel rehashing.
 #pragma omp parallel for
@@ -133,9 +133,9 @@ TEST(OMPHashMapTest, MapReduce) {
   EXPECT_EQ(initial_a_count, 5);
 }
 
-TEST(OMPHashMapLargeTest, HundredMillionsMapReduce) {
+TEST(OMPHashMapLargeTest, TenMillionsMapReduce) {
   cornell::hci::omp_hash_map<int, int> m;
-  constexpr int LARGE_N_KEYS = 100000000;
+  constexpr int LARGE_N_KEYS = 10000000;
 
   m.reserve(LARGE_N_KEYS);
 #pragma omp parallel for
