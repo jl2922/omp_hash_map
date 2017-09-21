@@ -26,7 +26,7 @@ GTEST_MAIN := $(OBJ_DIR)/gtest_main.a
 all: test
 
 test: $(TEST_EXE)
-	./$(TEST_EXE)
+	./$(TEST_EXE) --gtest_filter=-*LargeTest.*
 
 all_tests: $(TEST_EXE)
 	./$(TEST_EXE)

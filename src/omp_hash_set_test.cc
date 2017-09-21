@@ -26,6 +26,14 @@ TEST(OMPHashSetTest, Reserve) {
   }
 }
 
+TEST(OMPHashSetTest, OneMillionReserve) {
+  cornell::hci::omp_hash_set<std::string> m;
+  constexpr size_t LARGE_N_BUCKETS = 1000000;
+  m.reserve(LARGE_N_BUCKETS);
+  const size_t n_buckets = m.get_n_buckets();
+  EXPECT_GE(n_buckets, LARGE_N_BUCKETS);
+}
+
 TEST(OMPHashSetLargeTest, HundredMillionsReserve) {
   cornell::hci::omp_hash_set<std::string> m;
   constexpr size_t LARGE_N_BUCKETS = 100000000;

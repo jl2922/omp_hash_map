@@ -260,9 +260,8 @@ template <class K, class V, class H>
 void omp_hash_map<K, V, H>::set(const K& key, const std::function<void(V&)>& setter) {
   const auto& node_handler = [&](std::unique_ptr<hash_node>& node) {
     if (!node) {
-      V value;
-      setter(value);
-      node.reset(new hash_node(key, value));
+      node.reset(new hash_node(key, V()));
+      setter(node->value);
 #pragma omp atomic
       n_keys++;
     } else {
