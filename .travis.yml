@@ -34,4 +34,7 @@ env:
   - OMP_NUM_THREADS=4
 before_install:
   - eval "${MATRIX_EVAL}"
+  - pip install --user cpp-coveralls
 script: make -j
+after_success:
+  - coveralls --exclude gtest-1.8.0 --gcov-options '\-lp'

@@ -2,7 +2,7 @@
 ifndef CXX
 CXX := g++
 endif
-CXXFLAGS := -std=c++14 -Wall -Wextra -O3 -fopenmp -g
+CXXFLAGS := -std=c++14 -Wall -Wextra -O3 -fopenmp -g --coverage
 SRC_DIR := src
 OBJ_DIR := build
 TEST_EXE := test.out
