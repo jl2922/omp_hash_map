@@ -1,5 +1,10 @@
 # Prerequisites
 *.d
+gtest/
+*.tar.gz
+
+# Runtime files.
+*.log
 
 # Compiled Object files
 *.slo

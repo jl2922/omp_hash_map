@@ -46,8 +46,9 @@ TEST(OMPHashMapTest, Set) {
   const auto& increase_by_one = [&](auto& value) { value++; };
   m.set("aa", increase_by_one);
   EXPECT_EQ(m.get_copy_or_default("aa", 0), 2);
-  m.set("cc", increase_by_one);
-  EXPECT_EQ(m.get_copy_or_default("cc", 0), 1);
+  cornell::hci::omp_hash_map<std::string, std::string> m2;
+  m2.set("cc", [&](auto& value) { value = value + "x"; });
+  EXPECT_EQ(m2.get_copy_or_default("cc", ""), "x");
 
   // Set with setter function and a custom default value.
   m.set("aa", increase_by_one, 0);

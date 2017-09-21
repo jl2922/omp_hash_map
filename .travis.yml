@@ -35,6 +35,7 @@ env:
 before_install:
   - eval "${MATRIX_EVAL}"
   - pip install --user cpp-coveralls
+  - ./install-dependencies.sh
 script: make -j
 after_success:
   - coveralls --exclude gtest-1.8.0 --exclude-pattern .*_test.cc --gcov-options '\-lp'

@@ -13,7 +13,7 @@ HEADERS := $(shell find $(SRC_DIR) -name "*.h")
 TEST_OBJS := $(TESTS:$(SRC_DIR)/%.cc=$(OBJ_DIR)/%.o)
 
 # GTest related.
-GTEST_DIR := gtest-1.8.0/googletest
+GTEST_DIR := gtest/googletest
 GTEST_CXXFLAGS := $(CXXFLAGS) -isystem $(GTEST_DIR)/include -pthread
 GTEST_HEADERS := $(GTEST_DIR)/include/gtest/*.h \
 		$(GTEST_DIR)/include/gtest/internal/*.h
