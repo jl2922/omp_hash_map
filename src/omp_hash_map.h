@@ -7,8 +7,6 @@
 #include <vector>
 #include "omp.h"
 
-namespace cornell {
-namespace hci {
 // A high performance concurrent hash map based on OpenMP.
 template <class K, class V, class H = std::hash<K>>
 class omp_hash_map {
@@ -446,6 +444,5 @@ template <class K, class V, class H>
 void omp_hash_map<K, V, H>::unlock_all_segments() {
   for (auto& lock : segment_locks) omp_unset_lock(&lock);
 }
-}
-}
+
 #endif
