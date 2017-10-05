@@ -147,6 +147,7 @@ omp_hash_set<K, H>::omp_hash_set() {
 
 template <class K, class H>
 omp_hash_set<K, H>::~omp_hash_set() {
+  clear();
   for (auto& lock : segment_locks) omp_destroy_lock(&lock);
   for (auto& lock : rehashing_segment_locks) omp_destroy_lock(&lock);
 }
@@ -283,6 +284,12 @@ void omp_hash_set<K, H>::apply(const std::function<void(const K&)>& handler) {
 template <class K, class H>
 void omp_hash_set<K, H>::clear() {
   lock_all_segments();
+
+#pragma omp parallel for
+  for (size_t i = 0; i < n_buckets; i++) {
+    buckets[i].reset();
+  }
+
   buckets.resize(N_INITIAL_BUCKETS);
   for (auto& bucket : buckets) bucket.reset();
   n_keys = 0;

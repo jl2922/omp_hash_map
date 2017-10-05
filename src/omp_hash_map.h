@@ -167,6 +167,7 @@ omp_hash_map<K, V, H>::omp_hash_map() {
 
 template <class K, class V, class H>
 omp_hash_map<K, V, H>::~omp_hash_map() {
+  clear();
   for (auto& lock : segment_locks) omp_destroy_lock(&lock);
   for (auto& lock : rehashing_segment_locks) omp_destroy_lock(&lock);
 }
@@ -369,6 +370,12 @@ void omp_hash_map<K, V, H>::apply(const std::function<void(const K&, const V&)>&
 template <class K, class V, class H>
 void omp_hash_map<K, V, H>::clear() {
   lock_all_segments();
+
+#pragma omp parallel for
+  for (size_t i = 0; i < n_buckets; i++) {
+    buckets[i].reset();
+  }
+
   buckets.resize(N_INITIAL_BUCKETS);
   for (auto& bucket : buckets) bucket.reset();
   n_keys = 0;
