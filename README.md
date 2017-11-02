@@ -37,7 +37,7 @@ int main() {
   const auto& square = [&](const int key, const int value) {
     return value * value;
   };
-  const int sum = m.map_reduce<int>(mapper, reducer::sum<int>, 0);  // 8.
+  const int sum = m.map_reduce<int>(square, reducer::sum<int>, 0);  // 8.
 
   return 0;
 
